@@ -2,462 +2,404 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Для тебя ❤️</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@300;400;600&display=swap');
+
         body {
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background-color: #0d0614;
-            font-family: 'Montserrat', sans-serif;
-            color: #ffffff;
+            background-color: #05020a;
+            font-family: 'Inter', sans-serif;
             user-select: none;
             -webkit-user-select: none;
+            touch-action: manipulation;
         }
+
         .font-handwriting {
             font-family: 'Caveat', cursive;
         }
-        /* Custom Glowing and Shadows */
-        .glow-text {
-            text-shadow: 0 0 15px rgba(244, 114, 182, 0.6), 0 0 30px rgba(225, 29, 72, 0.4);
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
         }
+
         .glass-card {
-            background: rgba(25, 10, 35, 0.75);
+            background: rgba(18, 10, 26, 0.75);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(244, 114, 182, 0.2);
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(244, 114, 182, 0.15);
+            border: 1px solid rgba(255, 182, 193, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(255, 20, 147, 0.25),
+                        inset 0 0 15px rgba(255, 105, 180, 0.15);
         }
-        canvas {
-            display: block;
-            touch-action: none;
+
+        .fade-enter {
+            opacity: 0;
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        /* Heart pulse effect */
-        @keyframes subtlePulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+
+        .fade-enter-active {
+            opacity: 1;
+            transform: scale(1) translateY(0);
         }
-        .pulse-btn {
-            animation: subtlePulse 2s infinite ease-in-out;
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
     </style>
 </head>
-<body class="relative min-h-screen flex items-center justify-center">
+<body class="relative w-screen h-screen flex items-center justify-center text-white overflow-hidden">
 
-    <!-- Background Canvas -->
-    <canvas id="heartCanvas" class="absolute inset-0 z-0 cursor-pointer"></canvas>
+    <!-- Interactive Canvas Layer -->
+    <div id="canvas-container">
+        <canvas id="heartCanvas"></canvas>
+    </div>
 
-    <!-- Top Bar Controls -->
-    <div class="absolute top-5 left-5 right-5 z-10 flex justify-between items-center pointer-events-none">
-        <div class="pointer-events-auto flex items-center space-x-2 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-pink-500/20 shadow-lg">
-            <span class="w-2.5 h-2.5 rounded-full bg-pink-500 animate-ping"></span>
-            <span class="text-xs tracking-wider text-pink-200 uppercase font-semibold">Нажми на сердце</span>
+    <!-- Center Interactive Hint -->
+    <div id="hintText" class="absolute bottom-12 z-10 pointer-events-none text-center px-4 transition-opacity duration-700">
+        <p class="text-pink-200/80 text-sm tracking-widest uppercase font-light animate-pulse mb-1">
+            Коснись сердца
+        </p>
+        <div class="flex justify-center items-center gap-1 text-xs text-pink-400/50">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>нажми в любое место</span>
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
         </div>
-
-        <!-- Music Toggle Button -->
-        <button id="musicBtn" class="pointer-events-auto p-3 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-pink-500/30 text-pink-300 transition-all duration-300 hover:scale-110 active:scale-95 shadow-lg flex items-center justify-center">
-            <i data-lucide="music-4" id="musicIcon" class="w-5 h-5"></i>
-        </button>
     </div>
 
-    <!-- Hint text overlay -->
-    <div id="hintText" class="absolute bottom-10 z-10 text-center pointer-events-none transition-opacity duration-1000 opacity-80">
-        <p class="text-pink-300/80 text-sm md:text-base font-light tracking-widest uppercase mb-1">Прикоснись к экрану</p>
-        <i data-lucide="sparkles" class="w-4 h-4 mx-auto text-pink-400 animate-bounce"></i>
-    </div>
-
-    <!-- Romantic Message Modal -->
-    <div id="messageModal" class="fixed inset-0 z-20 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-500 scale-95">
-        <div class="glass-card max-w-lg w-full rounded-3xl p-6 md:p-8 text-center relative overflow-hidden transform transition-all duration-500">
-            <!-- Decorative corner lights -->
-            <div class="absolute -top-12 -left-12 w-32 h-32 bg-pink-500/20 rounded-full blur-2xl"></div>
-            <div class="absolute -bottom-12 -right-12 w-32 h-32 bg-rose-500/20 rounded-full blur-2xl"></div>
-
+    <!-- Romantic Letter Modal Popup -->
+    <div id="letterModal" class="fixed inset-0 z-30 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-500">
+        <div id="modalContent" class="glass-card max-w-md w-full rounded-3xl p-6 sm:p-8 relative border border-pink-500/30 shadow-2xl fade-enter max-h-[85vh] flex flex-col justify-between">
+            
             <!-- Close Button -->
-            <button id="closeBtn" class="absolute top-4 right-4 text-pink-300/70 hover:text-pink-100 p-2 rounded-full transition-colors">
-                <i data-lucide="x" class="w-6 h-6"></i>
+            <button id="closeBtn" class="absolute top-4 right-4 p-2 text-pink-300/70 hover:text-pink-100 hover:bg-white/10 rounded-full transition-all">
+                <i data-lucide="x" class="w-5 h-5"></i>
             </button>
 
             <!-- Card Header -->
-            <div class="mb-4 inline-flex p-3 rounded-2xl bg-pink-500/10 border border-pink-500/20 text-pink-400">
-                <i data-lucide="heart" class="w-8 h-8 fill-pink-500/30"></i>
+            <div class="flex items-center gap-3 mb-4 border-b border-pink-500/20 pb-3">
+                <div class="p-2.5 rounded-2xl bg-gradient-to-tr from-pink-600 to-rose-400 text-white shadow-md">
+                    <i data-lucide="heart" class="w-5 h-5 fill-current"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold text-pink-100 leading-tight">Для тебя ❤️</h2>
+                    <p class="text-xs text-pink-300/60">Маленькое напоминание</p>
+                </div>
             </div>
 
-            <h2 class="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-rose-300 to-red-200 mb-2 font-handwriting tracking-wide">
-                Для моей самой любимой
-            </h2>
-
-            <!-- Card Content with Typewriter Effect -->
-            <div class="my-6 min-h-[140px] flex items-center justify-center px-2">
-                <p id="typedMessage" class="text-pink-100/90 text-lg md:text-xl leading-relaxed font-light text-left font-handwriting tracking-wide">
-                    <!-- Text will be typed dynamically -->
-                </p>
+            <!-- Card Body / Typing Text Area -->
+            <div class="overflow-y-auto no-scrollbar my-2 pr-1 flex-grow">
+                <p id="typedText" class="font-handwriting text-2xl sm:text-3xl text-pink-100 leading-relaxed font-semibold min-h-[160px] whitespace-pre-wrap"></p>
             </div>
 
             <!-- Card Footer -->
-            <div class="pt-4 border-t border-pink-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <span class="text-xs text-pink-300/60 uppercase tracking-widest font-semibold">Всегда твой ❤️</span>
-                <button id="nextMsgBtn" class="pulse-btn w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-medium text-sm shadow-lg shadow-pink-600/30 transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center space-x-2">
-                    <span>Ещё слова</span>
-                    <i data-lucide="sparkle" class="w-4 h-4"></i>
+            <div class="mt-4 pt-3 border-t border-pink-500/20 flex items-center justify-between">
+                <span class="text-xs text-pink-300/50 flex items-center gap-1">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> С любовью
+                </span>
+                <button id="explodeBtn" class="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-medium rounded-xl shadow-lg shadow-pink-500/25 active:scale-95 transition-all flex items-center gap-1.5 opacity-0 pointer-events-none duration-500">
+                    <i data-lucide="heart-handshake" class="w-4 h-4"></i>
+                    <span>Нажми меня ❤️</span>
                 </button>
             </div>
         </div>
     </div>
 
+    <!-- Final Black Screen with Glowing Text -->
+    <div id="finalScreen" class="fixed inset-0 z-50 bg-black flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-1000">
+        <h1 id="finalText" class="font-handwriting text-5xl sm:text-7xl text-pink-500 font-bold tracking-wide text-center px-4 transition-all duration-1000 scale-95 opacity-0 drop-shadow-[0_0_25px_rgba(255,105,180,0.8)]">
+            Я тебя люблю
+        </h1>
+    </div>
+
     <script>
-        // Initialize Lucide Icons
         lucide.createIcons();
 
-        // Canvas Setup
+        // CANVAS PARTICLES SETUP
         const canvas = document.getElementById('heartCanvas');
         const ctx = canvas.getContext('2d');
 
-        let width, height;
-        let heartParticles = [];
-        let backgroundParticles = [];
-        let clickBurstParticles = [];
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
 
-        // Dynamic Heart Math Equations
-        function heartEquation(t) {
-            // Heart parametric formula
-            const x = 16 * Math.pow(Math.sin(t), 3);
-            const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
-            return { x, y };
-        }
-
-        // Resize Canvas dynamically
-        function resize() {
+        window.addEventListener('resize', () => {
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
             initHeartParticles();
+        });
+
+        const particles = [];
+        const backgroundParticles = [];
+        const numHeartParticles = Math.min(window.innerWidth < 600 ? 1200 : 2200, 2500);
+        let pointer = { x: width / 2, y: height / 2 };
+        let isExploded = false;
+
+        function getHeartPosition(t) {
+            const scale = Math.min(width, height) / 38;
+            const x = 16 * Math.pow(Math.sin(t), 3);
+            const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+            return { x: x * scale, y: y * scale };
         }
 
-        // Particle Class for 3D/Glowing Heart Effect
         class HeartParticle {
-            constructor(targetX, targetY) {
-                this.originX = targetX;
-                this.originY = targetY;
-                this.x = (Math.random() - 0.5) * width;
-                this.y = (Math.random() - 0.5) * height;
-                this.vx = 0;
-                this.vy = 0;
-                this.radius = Math.random() * 2 + 1;
-                this.color = `hsla(${330 + Math.random() * 30}, 100%, ${65 + Math.random() * 25}%, ${Math.random() * 0.7 + 0.3})`;
-                this.speed = Math.random() * 0.04 + 0.02;
-                this.friction = 0.88;
-                this.pulseSpeed = Math.random() * 0.03 + 0.01;
-                this.angle = Math.random() * Math.PI * 2;
-            }
-
-            update(scale, pulse) {
-                // Heart beat pulsation
-                const currentTargetX = this.originX * scale * (1 + pulse * 0.08);
-                const currentTargetY = this.originY * scale * (1 + pulse * 0.08);
-
-                // Spring physics towards origin
-                const dx = currentTargetX - this.x;
-                const dy = currentTargetY - this.y;
-
-                this.vx += dx * this.speed;
-                this.vy += dy * this.speed;
-                this.vx *= this.friction;
-                this.vy *= this.friction;
-
-                this.x += this.vx;
-                this.y += this.vy;
-
-                // Subtle float effect
-                this.angle += this.pulseSpeed;
-            }
-
-            draw() {
-                ctx.save();
-                ctx.translate(width / 2, height / 2);
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#f43f5e';
-                ctx.fill();
-                ctx.restore();
-            }
-        }
-
-        // Background Floating Stars/Hearts
-        class BackgroundParticle {
             constructor() {
                 this.reset();
             }
 
             reset() {
-                this.x = Math.random() * width;
-                this.y = Math.random() * height;
-                this.size = Math.random() * 2 + 0.5;
-                this.speedY = - (Math.random() * 0.5 + 0.1);
-                this.speedX = (Math.random() - 0.5) * 0.3;
-                this.opacity = Math.random() * 0.5 + 0.1;
-                this.fadeSpeed = Math.random() * 0.005 + 0.002;
+                this.t = Math.random() * Math.PI * 2;
+                const pos = getHeartPosition(this.t);
+                
+                const spread = (Math.random() - 0.5) * 25;
+                this.targetX = pos.x + spread;
+                this.targetY = pos.y + spread;
+
+                this.x = (Math.random() - 0.5) * width;
+                this.y = (Math.random() - 0.5) * height;
+
+                this.vx = 0;
+                this.vy = 0;
+                this.speed = 0.04 + Math.random() * 0.04;
+                this.friction = 0.88 + Math.random() * 0.05;
+
+                this.size = Math.random() * 2 + 0.8;
+                const colors = [
+                    'rgba(255, 60, 120, ',
+                    'rgba(255, 120, 180, ',
+                    'rgba(255, 180, 210, ',
+                    'rgba(220, 40, 90, '
+                ];
+                this.colorPrefix = colors[Math.floor(Math.random() * colors.length)];
+                this.alpha = Math.random() * 0.7 + 0.3;
             }
 
-            update() {
-                this.y += this.speedY;
-                this.x += this.speedX;
-                this.opacity += Math.sin(Date.now() * 0.002) * 0.003;
-
-                if (this.y < 0 || this.x < 0 || this.x > width) {
-                    this.reset();
-                    this.y = height;
-                }
-            }
-
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(244, 114, 182, ${Math.max(0, Math.min(1, this.opacity))})`;
-                ctx.fill();
-            }
-        }
-
-        // Interactive Click Burst Particles (Heart Explosion)
-        class BurstParticle {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
+            explode() {
                 const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 6 + 2;
-                this.vx = Math.cos(angle) * speed;
-                this.vy = Math.sin(angle) * speed;
-                this.life = 1;
-                this.decay = Math.random() * 0.02 + 0.015;
-                this.size = Math.random() * 4 + 2;
-                this.color = `hsl(${340 + Math.random() * 30}, 100%, 70%)`;
+                const force = Math.random() * 25 + 10;
+                this.vx = Math.cos(angle) * force;
+                this.vy = Math.sin(angle) * force;
+                this.friction = 0.96;
             }
 
-            update() {
+            update(time) {
+                if (isExploded) {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.vx *= this.friction;
+                    this.vy *= this.friction;
+                    this.alpha -= 0.008;
+                    return;
+                }
+
+                const pulse = 1 + Math.sin(time * 3) * 0.06;
+                const tx = this.targetX * pulse + width / 2;
+                const ty = this.targetY * pulse + height / 2 - 20;
+
+                let dx = pointer.x - this.x;
+                let dy = pointer.y - this.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist < 100) {
+                    const force = (100 - dist) / 100;
+                    this.vx -= (dx / dist) * force * 4;
+                    this.vy -= (dy / dist) * force * 4;
+                }
+
+                this.vx += (tx - this.x) * this.speed;
+                this.vy += (ty - this.y) * this.speed;
+
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+
                 this.x += this.vx;
                 this.y += this.vy;
-                this.vy += 0.05; // slight gravity
-                this.life -= this.decay;
             }
 
             draw() {
-                if (this.life <= 0) return;
-                ctx.save();
-                ctx.globalAlpha = this.life;
+                if (this.alpha <= 0) return;
+                ctx.fillStyle = this.colorPrefix + Math.max(0, this.alpha) + ')';
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.shadowBlur = 8;
-                ctx.shadowColor = '#ec4899';
                 ctx.fill();
-                ctx.restore();
             }
         }
 
-        // Initialize Particles
+        class BackgroundStar {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = Math.random() * 1.5;
+                this.alpha = Math.random() * 0.5 + 0.1;
+                this.speed = Math.random() * 0.02 + 0.005;
+            }
+
+            update() {
+                this.alpha += Math.sin(Date.now() * this.speed) * 0.01;
+            }
+
+            draw() {
+                ctx.fillStyle = `rgba(255, 220, 240, ${Math.max(0.05, Math.min(0.8, this.alpha))})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
         function initHeartParticles() {
-            heartParticles = [];
-            const particleCount = window.innerWidth < 640 ? 1200 : 2000;
-            for (let i = 0; i < particleCount; i++) {
-                const t = Math.random() * Math.PI * 2;
-                const pos = heartEquation(t);
+            particles.length = 0;
+            backgroundParticles.length = 0;
 
-                // Distribute inside heart as well as on boundary
-                const fillFactor = Math.sqrt(Math.random()); 
-                const x = pos.x * fillFactor;
-                const y = pos.y * fillFactor;
-
-                heartParticles.push(new HeartParticle(x, y));
+            for (let i = 0; i < numHeartParticles; i++) {
+                particles.push(new HeartParticle());
             }
 
-            backgroundParticles = [];
-            for (let i = 0; i < 80; i++) {
-                backgroundParticles.push(new BackgroundParticle());
+            for (let i = 0; i < 150; i++) {
+                backgroundParticles.push(new BackgroundStar());
             }
         }
 
-        let pulseTime = 0;
-        function animate() {
-            ctx.fillStyle = 'rgba(13, 6, 20, 0.25)'; // Smooth trail effect
+        initHeartParticles();
+
+        function updatePointer(e) {
+            const x = e.touches ? e.touches[0].clientX : e.clientX;
+            const y = e.touches ? e.touches[0].clientY : e.clientY;
+            pointer.x = x;
+            pointer.y = y;
+        }
+
+        window.addEventListener('mousemove', updatePointer);
+        window.addEventListener('touchmove', updatePointer, { passive: true });
+
+        function animate(time) {
+            ctx.fillStyle = 'rgba(5, 2, 10, 0.25)';
             ctx.fillRect(0, 0, width, height);
 
-            pulseTime += 0.04;
-            const pulse = Math.sin(pulseTime);
-            
-            // Calculate responsive scale for the heart
-            const scale = Math.min(width, height) / 45;
+            if (!isExploded) {
+                backgroundParticles.forEach(star => {
+                    star.update();
+                    star.draw();
+                });
+            }
 
-            // Update & Draw Background
-            backgroundParticles.forEach(p => {
-                p.update();
+            particles.forEach(p => {
+                p.update(time * 0.001);
                 p.draw();
-            });
-
-            // Update & Draw Heart Particles
-            heartParticles.forEach(p => {
-                p.update(scale, pulse);
-                p.draw();
-            });
-
-            // Update & Draw Click Bursts
-            clickBurstParticles.forEach((p, index) => {
-                p.update();
-                p.draw();
-                if (p.life <= 0) {
-                    clickBurstParticles.splice(index, 1);
-                }
             });
 
             requestAnimationFrame(animate);
         }
 
-        // Synthesizer Audio Ambient (No external MP3 required!)
-        let audioCtx = null;
-        let isPlayingAudio = false;
-        let audioInterval = null;
+        requestAnimationFrame(animate);
 
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-        }
+        // MODAL & EXPLOSION LOGIC
+        const letterModal = document.getElementById('letterModal');
+        const modalContent = document.getElementById('modalContent');
+        const typedTextEl = document.getElementById('typedText');
+        const hintText = document.getElementById('hintText');
+        const closeBtn = document.getElementById('closeBtn');
+        const explodeBtn = document.getElementById('explodeBtn');
+        const finalScreen = document.getElementById('finalScreen');
+        const finalText = document.getElementById('finalText');
 
-        function playRomanticNote() {
-            if (!audioCtx || !isPlayingAudio) return;
+        const romanticMessage = "Каждый день я благодарю судьбу за то, что ты есть в моей жизни.\n\nТвоя улыбка освещает всё вокруг, а твои глаза — это самое прекрасное, что я видел...\n\nДаже когда мы не вместе, я могу тебя так порадовать! Улыбайся чаще, твоя улыбка самая яркая, а глаза самые красивые! ❤️";
 
-            const notes = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25]; // Pentatonic scale (C, D, E, G, A, C)
-            const freq = notes[Math.floor(Math.random() * notes.length)];
+        let typingTimeout;
 
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-
-            // Attack & Release Envelope
-            gain.gain.setValueAtTime(0, audioCtx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 1.5);
-            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 5.0);
-
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-
-            osc.start();
-            osc.stop(audioCtx.currentTime + 5.0);
-        }
-
-        function toggleAudio() {
-            initAudio();
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-
-            const musicBtn = document.getElementById('musicBtn');
-            const musicIcon = document.getElementById('musicIcon');
-
-            if (!isPlayingAudio) {
-                isPlayingAudio = true;
-                musicBtn.classList.add('bg-pink-600/50', 'text-white');
-                audioInterval = setInterval(playRomanticNote, 1200);
-                playRomanticNote();
+        function typeWriter(text, i = 0) {
+            if (i < text.length) {
+                typedTextEl.textContent += text.charAt(i);
+                typingTimeout = setTimeout(() => typeWriter(text, i + 1), 35 + Math.random() * 25);
             } else {
-                isPlayingAudio = false;
-                musicBtn.classList.remove('bg-pink-600/50', 'text-white');
-                clearInterval(audioInterval);
+                // Show the final button when text finishes typing
+                explodeBtn.classList.remove('opacity-0', 'pointer-events-none');
             }
-        }
-
-        // Romantic Messages Database (Можешь заменить своими словами!)
-        const romanticMessages = [
-            "Ты — самое прекрасное, что случилось со мной. Твоя улыбка освещает даже самые пасмурные дни ✨",
-            "Каждая секунда рядом с тобой делает этот мир невероятно уютным и тёплым ❤️",
-            "Я просто хотел напомнить тебе прямо сейчас, насколько ты невероятная и любимая!",
-            "Твои глаза — моё самое любимое место во всей вселенной. Люблю тебя безумно 💖"
-        ];
-
-        let currentMsgIndex = 0;
-        let isTyping = false;
-
-        function typeWriterText(text, elementId) {
-            const element = document.getElementById(elementId);
-            element.innerHTML = '';
-            isTyping = true;
-            let i = 0;
-
-            function type() {
-                if (i < text.length) {
-                    element.innerHTML += text.charAt(i);
-                    i++;
-                    setTimeout(type, 35);
-                } else {
-                    isTyping = false;
-                }
-            }
-            type();
         }
 
         function openModal() {
-            const modal = document.getElementById('messageModal');
-            modal.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
-            modal.classList.add('opacity-100', 'scale-100');
-            
-            typeWriterText(romanticMessages[currentMsgIndex], 'typedMessage');
-            
-            // Hide hint text
-            document.getElementById('hintText').style.opacity = '0';
+            if (isExploded) return;
+            hintText.classList.add('opacity-0');
+            letterModal.classList.remove('opacity-0', 'pointer-events-none');
+            modalContent.classList.add('fade-enter-active');
+
+            confetti({
+                particleCount: 40,
+                spread: 60,
+                origin: { y: 0.6 },
+                colors: ['#ff2b5b', '#ff69b4', '#ffb6c1']
+            });
+
+            typedTextEl.textContent = '';
+            clearTimeout(typingTimeout);
+            explodeBtn.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => typeWriter(romanticMessage), 300);
         }
 
         function closeModal() {
-            const modal = document.getElementById('messageModal');
-            modal.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
-            modal.classList.remove('opacity-100', 'scale-100');
+            letterModal.classList.add('opacity-0', 'pointer-events-none');
+            modalContent.classList.remove('fade-enter-active');
+            clearTimeout(typingTimeout);
         }
-
-        // Interactive Click/Tap Events
-        function handleInteraction(x, y) {
-            // Create burst particles
-            for (let i = 0; i < 25; i++) {
-                clickBurstParticles.push(new BurstParticle(x, y));
-            }
-
-            // Open modal letter
-            openModal();
-        }
-
-        // Event Listeners
-        window.addEventListener('resize', resize);
 
         canvas.addEventListener('click', (e) => {
-            handleInteraction(e.clientX, e.clientY);
+            if (isExploded) return;
+            confetti({
+                particleCount: 15,
+                scalar: 0.8,
+                spread: 50,
+                origin: { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight },
+                colors: ['#ff2b5b', '#ffa8c5']
+            });
+            openModal();
         });
 
-        canvas.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 0) {
-                const touch = e.touches[0];
-                handleInteraction(touch.clientX, touch.clientY);
-            }
-        }, { passive: true });
+        closeBtn.addEventListener('click', closeModal);
 
-        document.getElementById('closeBtn').addEventListener('click', closeModal);
+        // Explode Heart and Show Black Screen Animation
+        explodeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeModal();
 
-        document.getElementById('nextMsgBtn').addEventListener('click', () => {
-            if (isTyping) return;
-            currentMsgIndex = (currentMsgIndex + 1) % romanticMessages.length;
-            typeWriterText(romanticMessages[currentMsgIndex], 'typedMessage');
+            // Explode particles
+            isExploded = true;
+            particles.forEach(p => p.explode());
+
+            // Big Confetti explosion
+            confetti({
+                particleCount: 120,
+                spread: 100,
+                origin: { y: 0.5 },
+                colors: ['#ff0055', '#ff66aa', '#ffffff', '#ffd700']
+            });
+
+            // Fade to black screen after 1.2 seconds
+            setTimeout(() => {
+                finalScreen.classList.remove('opacity-0', 'pointer-events-none');
+                
+                // Smoothly show "Я тебя люблю" text
+                setTimeout(() => {
+                    finalText.classList.remove('opacity-0', 'scale-95');
+                    finalText.classList.add('opacity-100', 'scale-100');
+                }, 800);
+            }, 1200);
         });
-
-        document.getElementById('musicBtn').addEventListener('click', toggleAudio);
-
-        // Start App
-        window.onload = () => {
-            resize();
-            animate();
-        };
     </script>
 </body>
 </html>
